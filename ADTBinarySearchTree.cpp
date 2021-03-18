@@ -18,13 +18,13 @@ public:
     }
 
     // ADT Interface Functions
-    void print_item (TreeNode <T> *node);
     TreeNode <T>* find_min (TreeNode <T> *current);
     TreeNode <T>* find_max (TreeNode <T> *current);
     TreeNode <T>* successor (T x);
     TreeNode <T>* predecessor (T x);
     int height(TreeNode <T> *node);
     TreeNode <T>* search (T x);
+    void print_item (TreeNode <T> *node);
 
     void insert (T x);
     void remove (T x);
