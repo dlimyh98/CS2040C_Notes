@@ -226,11 +226,11 @@ int AVLTree<T> :: getRank(AVLNode <T> *node)   // Finds the Rank Value of specif
  * SCENARIO 2 = Node is Left-Balanced Heavy OR Left-Left Heavy
  * 1. right_rotate(v)
  *
- * SCENARIO 3 - Node is Right-Right Heavy
+ * SCENARIO 3 - Node is Right-Left Heavy
  * 1. right_rotate(v.right)
  * 2. left_rotate(v)
  *
- * SCENARIO 4 - Node is Right-Balanced Heavy OR Right-Left Heavy
+ * SCENARIO 4 - Node is Right-Balanced Heavy OR Right-Right Heavy
  * 1. left_rotate(v)
  *
  */
