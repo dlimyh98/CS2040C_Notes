@@ -13,24 +13,22 @@ private:
     AVLNode <T> *root;
 
 public:
-    AVLTree()
-    {
-        root = nullptr;
-    }
+    AVLTree() {root = nullptr;}
 
     // ADT Interface Functions
-    void print_item (AVLNode <T> *node);
-    void print_height (T vertex);
     AVLNode <T>* find_min (AVLNode <T> *current);
     AVLNode <T>* find_max (AVLNode <T> *current);
     AVLNode <T>* successor (T x);
     AVLNode <T>* predecessor (T x);
+
     int height(AVLNode <T> *node);
     AVLNode <T>* search (T x);
-
     void insert (T x);
     void remove (T x);
     void removeHeight (AVLNode <T> *traversal);
+    void print_item (AVLNode <T> *node);
+    void print_height (T vertex);
+    void print_weight (T vertex);
 
     void inorder (AVLNode <T> *node);
     void preorder (AVLNode <T> *node);
@@ -45,6 +43,7 @@ public:
 
     T selectRank (int x);
     int getRank (AVLNode <T> *node);
+    void print_weight(T vertex);
 
     friend AVLNode <T>;
 };
@@ -61,16 +60,12 @@ private:
     AVLNode <T> *parent;
 
 public:
-    AVLNode (T x)
-    {
-        item = x;
-        height = 0;
-        weight = 0;
-        parent = nullptr;
-        left = nullptr;
-        right = nullptr;
-    }
-
+    AVLNode (T x) {item = x; height = 0; weight = 1; parent = nullptr; left = nullptr; right = nullptr;}
+    /*
+     * Weight of Node is size of the tree ROOTED at THAT NODE
+     * - w(leaf) = 1
+     * - w(v) = w(v.left) + w(v.right) + 1
+     */
 
     friend  AVLTree <T>;
 };
@@ -80,52 +75,126 @@ int main () {
 }
 
 template <class T>
-T AVLTree <T> :: selectRank (int actual_rank)  // Gets value of Node that is of Rank x
+void AVLTree <T> :: _selectRank(int actual_rank)     // Gets value of Node that is of Rank x
+{
+    T ranked_node = selectRank(actual_rank, root);
+    std::cout << ranked_node << " ";
+}
+
+/**
+ *
+ * @param actual_rank     Rank value we are interested in
+ * @param traversal       Pointer to node that we are currently 'traversing' at
+ * @return                NODE value that has Rank Value "actual_rank"
+ *
+ * This function attempts to find the NODE value that has the Rank Value "actual_rank"
+ * We can do this in TWO parts.
+ *
+ * Part 1   We obtain the RANK of the node we are CURRENTLY at, by peeking at Weight of Left Child
+ *          Note that the RANK value we obtain here is w.r.t the LEFT SUB-TREE of our CURRENT node
+ *
+ * Part 2   We compare the Rank value calculated above, with the "actual_rank" value we are interested in
+ *          - If "actual_rank" is smaller than the Rank Value calculated above, we must travel down the LEFT SUBTREE of the node we are CURRENTLY at
+ *            This works, because the LEFT SUBTREE contains all the nodes smaller than the node we are CURRENTLY at, so a node with SMALLER rank will be in this LEFT SUBTREE
+ *
+ *          - If "actual_rank" is larger than the Rank Value calculated above, we must travel down the RIGHT SUBTREE of the node we are CURRENTLY at
+ *            1. Why don't we travel up the 'Parent Chain'? Since we started calculating Rank Value from the ROOT downwards, we will never need to traverse up 'Parent Chain'
+ *            2. We must appropriately offset the "actual_rank" value that we are interested in.
+ *               When we traverse down the RIGHT SUBTREE, we are implicitly stating that the LEFT SUBTREE contains nodes that are SMALLER than node we are currently at (as it should be)
+ *               Hence, we must minus all these LEFT SUBTREE nodes from the "actual_rank" value that we are interested in, so that when we traverse down the RIGHT SUBTREE, we will
+ *               be calculating the correctly adjusted "actual_rank" value
+ *
+ */
+template <class T>
+T AVLTree <T> :: selectRank (int actual_rank, AVLNode<T> *traversal)
 {
     int subtree_rank;
-    AVLNode <T> *traversal = root;
 
     // Get Rank of Node you are currently at, by peeking at Weight of Left Child
     // Rank of Node will be in relation to Left Sub-Tree, NOT in relation to ENTIRE Sub-Tree
-    subtree_rank = (traversal -> left -> weight) + 1;
+    // We choose Left Subtree because, Left Subtree has ALL the nodes smaller than you currently. Hence, +1 to that gives us exactly the rank
+    if (traversal -> left != nullptr)
+        subtree_rank = (traversal -> left -> weight) + 1;
+
+    else
+        subtree_rank = 1;
 
     // Comparing SubTree Rank with Actual Rank Value
-
     if (subtree_rank == actual_rank)   // If Subtree Rank equals Actual Rank
         return traversal->item;        // We have found our Node
 
     else if (actual_rank < subtree_rank)  // If rank we want is smaller than our current Node's Subtree Rank
-        return (traversal -> left). selectRank(actual_rank);  // We progress down Left Child
+        return ( selectRank(actual_rank, traversal -> left));    // We progress down Left Child
 
-    else if (actual_rank > subtree_rank)  // If rank we want is larger than our current Node's Subtree Rank
+    else // (actual_rank > subtree_rank)  -- If rank we want is larger than our current Node's Subtree Rank
     {
-        int number_of_skipped_nodes = getRank(traversal -> left);    // Since left path has nodes SMALLER than the Node we want rank of, we must offset number of nodes accordingly
-        return (traversal -> right).selectRank(actual_rank - number_of_skipped_nodes);  // We progress down Right Child
+        int number_of_skipped_nodes = num_nodes_offset(traversal);    // Since left path has nodes SMALLER than the Node we want rank of, we must offset number of nodes accordingly
+        return ( selectRank(actual_rank - number_of_skipped_nodes, traversal -> right));  // We progress down Right Child
     }
 }
 
 template <class T>
+int AVLTree<T> :: num_nodes_offset(AVLNode <T> *node)
+{
+    return ( node -> left -> weight) + 1;
+}
+
+template <class T>
+void AVLTree<T> :: _getRank(T x)
+{
+    AVLNode<T> *node = search(x);
+    int rank_value = getRank(node);
+    std::cout << rank_value << " ";
+}
+
+/**
+ *
+ * @param node     Pointer to Node that we want to find Rank of
+ * @return         Returns Rank Value of Node (i.e. how many nodes are smaller than the specified node?)
+ *
+ * This function will attempt to find the Rank Value of a Node.
+ * Note that this Rank Value is w.r.t THE ENTIRE AVL TREE, not just a specific subset/sub-branch of the AVL Tree.
+ *
+ * The key idea behind this function, is to find the number of nodes that are smaller then our specified Node. We can calculate this in TWO parts.
+ *
+ * Part 1 - The Left Sub-Tree of our specified Node will have nodes that are SMALLER than our specified node, so they form part of our rank.
+ *        - We know the number of nodes in the Left Subtree, by considering the WEIGHT of the LEFT-SUBTREE's FIRST NODE
+ *
+ * Part 2 - We must travel up the 'Parent Chain', to find other nodes that are smaller than us. TWO more SUB-CONSIDERATIONS.
+ * 2.1      When we travel up the 'Parent Chain', the node we WERE at is currently the LEFT CHILD of the node we ARE at
+ *          We DO NOT need to consider ANY of these nodes, since the nodes we WERE at will be LARGER than all these nodes
+ *
+ * 2.2      When we travel up the 'Parent Chain, the node we WERE at is currently the RIGHT CHILD of the node we ARE at
+ *          We MUST consider the NODE we ARE at, as well as the ENTIRE LEFT SUBTREE of the NODE WE ARE AT, since these nodes are SMALLER than the node we WERE at.
+ *
+ */
+template <class T>
 int AVLTree<T> :: getRank(AVLNode <T> *node)   // Finds the Rank Value of specified Node
 {
     // Calculating initial value of Rank (based on specified Node's LEFT Subtree)
-    int rank = (node -> left -> weight) + 1;   // Rank of Node is (Weight of Left Child + 1), since Left Child will have
-                                               // (weight number) of nodes that are smaller than Node
+    int rank;
+
+    if (node -> left == nullptr)
+        rank = 0 + 1;                         // rank(null) = 0, plus 1 to include the CURRENT node
+
+    else
+        rank = (node -> left -> weight) + 1;  // Rank of Node is (Weight of Left Child + 1), since Left Child will have
+    // (weight number) of nodes that are smaller than Node, plus one to include CURRENT node
 
     // We want to find the TOTAL number of Nodes smaller than SPECIFIED NODE, as this will tell us
     // the rank easily (Rank of SPECIFIED NODE = TOTAL number of SMALLER Nodes + 1)
 
-    do
+    while (node -> parent != nullptr)
     {
         AVLNode <T> *original_position = node;
         node = node -> parent;
 
         if (node -> right == original_position)
         {
-           // Parent's left-subtree has Nodes that are smaller than Original Node
-           // Hence the number of these nodes must be added to Rank Value of Original Node
-
-           rank = rank + (node -> left -> weight);   // Adding Parent's "Left-Subtree Number" of Nodes
-           rank = rank + 1;                          // Adding Parent itself (it is smaller than Specified Node, since Specified Node is on it's Right Sub-Path
+            // Parent's left-subtree has Nodes that are smaller than Original Node
+            // Hence the number of these nodes must be added to Rank Value of Original Node
+            rank = rank + (node -> left -> weight);   // Adding Parent's "Left-Subtree Number" of Nodes
+            rank = rank + 1;                          // Adding Parent itself (it is smaller than Specified Node, since Specified Node is on it's Right Sub-Path
         }
 
         if (node -> left == original_position)
@@ -134,11 +203,37 @@ int AVLTree<T> :: getRank(AVLNode <T> *node)   // Finds the Rank Value of specif
             // in caculation of "Nodes smaller than SPECIFIED Node"
             continue;
         }
-    } while (node != nullptr);
+    }
 
     return rank;
 }
 
+/**
+ *
+ * @param vertex    Pointer to OFFENDING NODE that needs to be Adjusted
+ *
+ * This function controls HOW we Left Rotate / Right Rotate the offending node.
+ * 1. We find out which Scenario our offending Node falls into
+ * 2. We find out whether the vertex's appropriate child is Left or Right or Balanced Heavy
+ * 3. We balance accordingly as below
+ *
+ * Recall that there are FOUR possible scenarios
+ *
+ * SCENARIO 1 - Node is Left-Right Heavy
+ * 1. left_rotate(v.left)
+ * 2. right_rotate(v)
+ *
+ * SCENARIO 2 = Node is Left-Balanced Heavy OR Left-Left Heavy
+ * 1. right_rotate(v)
+ *
+ * SCENARIO 3 - Node is Right-Right Heavy
+ * 1. right_rotate(v.right)
+ * 2. left_rotate(v)
+ *
+ * SCENARIO 4 - Node is Right-Balanced Heavy OR Right-Left Heavy
+ * 1. left_rotate(v)
+ *
+ */
 template <class T>
 void AVLTree <T> :: BalanceAdjustment (AVLNode <T> *vertex)
 {
@@ -187,7 +282,13 @@ int AVLTree <T> ::LeftHeavy_or_RightHeavy(AVLNode <T> *BranchedOffVertex)
     else
         return 2;
 }
-
+/**
+ *
+ * @param x      Value of Node that we want to check AVLInvariant on
+ * @return       Returns 0 if balanced
+ *               Returns 1 if Left Heavy
+ *               Returns 2 if Right Heavy
+ */
 template <class T>
 int AVLTree <T> :: AVLInvariantCheck (T x)
 {
@@ -270,18 +371,18 @@ void AVLTree <T> :: right_rotate(AVLNode <T>* vertex)
     // Update of Weights
     int weight1, weight2, weight3;
 
-    assert(original_vertex_left_child_left_child != nullptr);
-    weight1 = original_vertex_left_child_left_child -> weight;
+    if (original_vertex_left_child_left_child != nullptr)
+        weight1 = original_vertex_left_child_left_child -> weight;
+    else
+        weight1 = 0;
 
     if (original_vertex_left_child_right_child != nullptr)   // Possible for it to be NULLPTR
         weight2 = original_vertex_left_child_right_child -> weight;
-
     else // original_vertex_left_child_right_child must be NULLPTR
         weight2 = 0;
 
     if (original_vertex_right_child != nullptr)             // Possible for it to be NULLPTR
         weight3 = original_vertex_right_child -> weight;
-
     else // original_vertex_left_child must be NULLPTR
         weight3 = 0;
 
@@ -335,10 +436,12 @@ void AVLTree <T> :: left_rotate(AVLNode <T>* vertex)
     // Update of Weights
     int weight1, weight2, weight3;
 
-    assert(original_vertex_right_child_right_child != nullptr);
-    weight1 = original_vertex_right_child_right_child-> weight;
+    if (original_vertex_right_child_right_child != nullptr)
+        weight1 = original_vertex_right_child_right_child -> weight;
+    else
+        weight1 = 0;
 
-    if (original_vertex_right_child_left_child != nullptr)   // Possible for it to be NULLPTR
+    if (original_vertex_right_child_left_child != nullptr)          // Possible for it to be NULLPTR
         weight2 = original_vertex_right_child_left_child-> weight;
     else
         weight2 = 0;
@@ -352,26 +455,31 @@ void AVLTree <T> :: left_rotate(AVLNode <T>* vertex)
     original_vertex -> weight = weight1 + weight2 + 1;
 }
 
-template <class T>
-AVLNode <T>* AVLTree <T> :: search (T x)
-{
-    AVLNode <T> *current = root;
-
-    while (current != nullptr)
-    {
-        if (current -> item == x)        // Target found
-            return current;
-
-        else if (current -> item < x)   // If Target larger than Current
-            current = current -> right; // Search Right Half of Sub-Tree
-
-        else
-            current = current -> left;  // Search Left Half of Sub-Tree
-    }
-
-    // If Target cannot be found, return NULL
-    return nullptr;
-}
+/**
+ *
+ * @param x   Value of Node to be inserted
+ *
+ * // This code shares alot of similarities with BinarySearchTree, consult ADTBinarySearchTree for more info. We will just focus on AVL-Tree specific considerations.
+ *
+ * Key Considerations when inserting a node for AVL-Tree
+ * 1. Must update the heights of ALL the PARENTS of the node that was just inserted
+ * 2. Must rebalance the Tree if needed
+ * 3. Must update the weights of ALL the PARENTS of the node that was just inserted
+ *
+ * Consideration 1 - How do we update the Heights?
+ * - When a node is inserted, only the PARENTS of the removed node are affected. The CHILDREN are not affected.
+ * - Hence, we just need to traverse up the 'Parent Chain', and update all the heights.
+ *
+ * Consideration 2 - How do we rebalance the Tree after insertion?
+ * - Recall that for AVL Tree, the invariant is that abs( v.left(height) - v.right(height) ) <= 1
+ * - Hence if the heights of the Tree is messed up after insertion, we must rebalance the AVL Tree
+ * - Rebalance by walking up the 'Parent Chain', and rotating Nodes that are out of balance
+ * - Rotations are done ON the OFFENDING node. (Note that maximum number of rotations during an Imbalance is 2)
+ *
+ * Consideration 3 - How do we update the Weights of Tree after insertion?
+ * - Travel up the 'Parent Chain', adding 1 from the weight while doing so
+ *
+ */
 
 template <class T>
 void AVLTree <T> :: insert (T x)
@@ -410,7 +518,6 @@ void AVLTree <T> :: insert (T x)
                 NodeJustInsertedMantainWeight = current -> left;
                 (current -> left) -> parent = current;
                 break;
-                //return;
             }
         }
 
@@ -429,7 +536,6 @@ void AVLTree <T> :: insert (T x)
                 NodeJustInsertedMantainWeight = current -> right;
                 (current -> right) -> parent = current;
                 break;
-                //return;
             }
         }
     }
@@ -458,6 +564,31 @@ void AVLTree <T> :: insert (T x)
     }
 }
 
+/**
+ *
+ * @param x   Value of Node to be removed
+ *
+ * // This code shares alot of similarities with BinarySearchTree, consult ADTBinarySearchTree for more info. We will just focus on AVL-Tree specific considerations.
+ *
+ * Key Considerations when removing a node for AVL-Tree
+ * 1. Must update the heights of ALL the PARENTS of the node that was just removed
+ * 2. Must rebalance the Tree if needed
+ * 3. Must update the weights of ALL the PARENTS of the node that was just removed
+ *
+ * Consideration 1 - How do we update the Heights?
+ * - When a node is removed, only the PARENTS of the removed node are affected. The CHILDREN are not affected.
+ * - Hence, we just need to traverse up the 'Parent Chain', and update all the heights.
+ *
+ * Consideration 2 - How do we rebalance the Tree after removal?
+ * - Recall that for AVL Tree, the invariant is that abs( v.left(height) - v.right(height) ) <= 1
+ * - Hence if the heights of the Tree is messed up after removal, we must rebalance the AVL Tree
+ * - Rebalance by walking up the 'Parent Chain', and rotating Nodes that are out of balance
+ * - Rotations are done ON the OFFENDING node. (Note that maximum number of rotations during an Imbalance is 2)
+ *
+ * Consideration 3 - How do we update the Weights of Tree after removal?
+ * - Travel up the 'Parent Chain', subtracting 1 from the weight while doing so
+ *
+ */
 template <class T>
 void AVLTree <T> :: remove (T x)
 {
@@ -559,6 +690,13 @@ void AVLTree <T> :: remove (T x)
     }
 }
 
+/**
+ * @param node    Pointer to Node that has just been inserted/deleted
+ *
+ * This function will balance the weight of the AVl Tree, after a node has been removed from the AVL Tree.
+ * We will travel up the 'Parent Chain' from the Node, and update all the heights along the way by subtracting 1.
+ */
+
 template <class T>
 void AVLTree <T> :: BalanceWeight(AVLNode <T> *node)
 {
@@ -569,6 +707,12 @@ void AVLTree <T> :: BalanceWeight(AVLNode <T> *node)
     }
 }
 
+/**
+ * @param traversal   Pointer to Node that has just been inserted/deleted
+ *
+ * This function is used to update the Heights, when we use an Insertion/Deletion operation on the AVL Tree.
+ * We will travel up the 'Parent Chain' from the Node, and update all the heights along the way.
+ */
 template <class T>
 void AVLTree <T> :: removeHeight(AVLNode <T> *traversal)
 {
@@ -746,4 +890,32 @@ void AVLTree <T> :: print_height (T vertex)
     AVLNode <T>* node = search(vertex);
     std::cout << "Height of Node " << node -> item << ", is " << node -> height;
     std::cout << std::endl;
+}
+
+template <class T>
+AVLNode <T>* AVLTree <T> :: search (T x)
+{
+    AVLNode <T> *current = root;
+
+    while (current != nullptr)
+    {
+        if (current -> item == x)        // Target found
+            return current;
+
+        else if (current -> item < x)   // If Target larger than Current
+            current = current -> right; // Search Right Half of Sub-Tree
+
+        else
+            current = current -> left;  // Search Left Half of Sub-Tree
+    }
+
+    // If Target cannot be found, return NULL
+    return nullptr;
+}
+
+template <class T>
+void AVLTree <T> :: print_weight(T vertex)
+{
+    AVLNode<T> *node = search(vertex);
+    std::cout << node -> weight << " ";
 }
