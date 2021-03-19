@@ -474,7 +474,7 @@ void AVLTree <T> :: left_rotate(AVLNode <T>* vertex)
  * - Recall that for AVL Tree, the invariant is that abs( v.left(height) - v.right(height) ) <= 1
  * - Hence if the heights of the Tree is messed up after insertion, we must rebalance the AVL Tree
  * - Rebalance by walking up the 'Parent Chain', and rotating Nodes that are out of balance
- * - Rotations are done ON the OFFENDING node. (Note that maximum number of rotations during an Imbalance is 2)
+ * - Rotations are done ON the OFFENDING node. (Note that maximum number of Rotations after INSERTIOn is 2)
  *
  * Consideration 3 - How do we update the Weights of Tree after insertion?
  * - Travel up the 'Parent Chain', adding 1 from the weight while doing so
@@ -583,7 +583,7 @@ void AVLTree <T> :: insert (T x)
  * - Recall that for AVL Tree, the invariant is that abs( v.left(height) - v.right(height) ) <= 1
  * - Hence if the heights of the Tree is messed up after removal, we must rebalance the AVL Tree
  * - Rebalance by walking up the 'Parent Chain', and rotating Nodes that are out of balance
- * - Rotations are done ON the OFFENDING node. (Note that maximum number of rotations during an Imbalance is 2)
+ * - Rotations are done ON the OFFENDING node. (Note that maximum number of rotations after Deletion is O(log n))
  *
  * Consideration 3 - How do we update the Weights of Tree after removal?
  * - Travel up the 'Parent Chain', subtracting 1 from the weight while doing so
