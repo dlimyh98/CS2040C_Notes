@@ -162,10 +162,14 @@ void AVLTree<T> :: _getRank(T x)
  *
  * Part 2 - We must travel up the 'Parent Chain', to find other nodes that are smaller than us. TWO more SUB-CONSIDERATIONS.
  * 2.1      When we travel up the 'Parent Chain', the node we WERE at is currently the LEFT CHILD of the node we ARE at
- *          We DO NOT need to consider ANY of these nodes, since the nodes we WERE at will be LARGER than all these nodes
+ *          We DO NOT need to consider ANY of these nodes, since the nodes we ARE at will be LARGER than all these nodes
  *
  * 2.2      When we travel up the 'Parent Chain, the node we WERE at is currently the RIGHT CHILD of the node we ARE at
  *          We MUST consider the NODE we ARE at, as well as the ENTIRE LEFT SUBTREE of the NODE WE ARE AT, since these nodes are SMALLER than the node we WERE at.
+ *
+ *          Remember the AVL/BST Tree characteristic....
+ *          - entire Left Subtree will be smaller than Node you are at
+ *          - entire Right Subtree will be larger than Node you are at 
  *
  */
 template <class T>
