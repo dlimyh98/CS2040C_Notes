@@ -1,8 +1,9 @@
 #include <math.h>
 #include <algorithm>
-
 #include <iostream>
 using namespace std;
+
+#define DEFAULTHEAPSIZE = 1024;
 
 template <class T>
 class Heap {
