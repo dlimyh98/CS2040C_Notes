@@ -18,8 +18,12 @@ public:
     // ADT Interface Functions
     AVLNode <T>* find_min (AVLNode <T> *current);
     AVLNode <T>* find_max (AVLNode <T> *current);
+    T SuccessorAlternative(T x);
+    T RightSubtreeMin(AVLNode<T> *node);
     AVLNode <T>* successor (T x);
     AVLNode <T>* predecessor (T x);
+    T PredecessorAlternative(T x);
+    T LeftSubtreeMax(AVLNode<T> *node);
 
     int height(AVLNode <T> *node);
     AVLNode <T>* search (T x);
@@ -41,9 +45,12 @@ public:
     void BalanceAdjustment(AVLNode <T> *vertex);
     void BalanceWeight(AVLNode <T> *node);
 
-    T selectRank (int x);
+
+    void _selectRank(int actual_rank);
+    int num_nodes_offset(AVLNode <T> *node);
+    T selectRank (int actual_rank, AVLNode<T> *traversal);
+    void _getRank(T x);
     int getRank (AVLNode <T> *node);
-    void print_weight(T vertex);
 
     friend AVLNode <T>;
 };
@@ -72,7 +79,25 @@ public:
 
 int main () {
     AVLTree<int> AVL;
+    AVL.insert(5);
+    AVL.insert(2);
+    AVL.insert(18);
+    AVL.insert(-4);
+    AVL.insert(3);
+
+    AVL._getRank(5);
+    std::cout << std::endl;
+    AVL._getRank(2);
+    std::cout << std::endl;
+    AVL._getRank(18);
+    std::cout << std::endl;
+    AVL._getRank(-4);
+    std::cout << std::endl;
+    AVL._getRank(3);
+    std::cout << std::endl;
+
 }
+
 
 template <class T>
 void AVLTree <T> :: _selectRank(int actual_rank)     // Gets value of Node that is of Rank x
@@ -179,7 +204,7 @@ int AVLTree<T> :: getRank(AVLNode <T> *node)   // Finds the Rank Value of specif
     int rank;
 
     if (node -> left == nullptr)
-        rank = 0 + 1;                         // rank(null) = 0, plus 1 to include the CURRENT node
+       rank = 0+1;                        // rank(null) = 0, plus 1 to include the CURRENT node
 
     else
         rank = (node -> left -> weight) + 1;  // Rank of Node is (Weight of Left Child + 1), since Left Child will have
@@ -209,7 +234,7 @@ int AVLTree<T> :: getRank(AVLNode <T> *node)   // Finds the Rank Value of specif
         }
     }
 
-    return rank;
+    return rank - 1;
 }
 
 /**
@@ -780,6 +805,97 @@ int AVLTree <T> :: height (AVLNode <T> *node)
 
 }
 
+/**
+ *
+ * @param x    Node value that you want to find successor of
+ * @return     Returns value of Node that is successor of x
+ *
+ * This function uses Top-Down traversal to find Successor.
+ *
+ * 1.   Starting from the Root of the tree, we search for x.
+ * 2.   The moment Parent has to turn LEFT to get to Child, we will record down/update that Parent. Else, no recording needed.
+ * 3.   If we reached x, check whether x has a Right Subtree.
+ * 3.1  x has a Right Subtree == Simply return the minimum of the Right Subtree
+ * 3.2  x has no Right Subtree == The most recently recorded down Parent (as per above), will be the Successor
+ *
+ * 4    We could have a scenario where x does not even exist (we have travelled all the way down, and unable to find x)
+ * 4.1  x does not even exist ==  The most recently recorded down Parent (as per above), will be the Successor
+ */
+
+template <class T>
+T AVLTree <T> :: SuccessorAlternative(T x)
+{
+    AVLNode<T>* traversal = root;
+    T parent_turn_left = -1;
+
+    while (traversal != nullptr)
+    {
+        if (traversal -> item > x)
+        {
+            parent_turn_left = traversal -> item;
+            traversal = traversal -> left;
+        }
+
+        else if (traversal -> item < x )
+            traversal = traversal -> right;
+
+        else
+        {
+            assert (traversal -> item == x);
+
+            if (traversal -> right != nullptr)
+            {
+                T value = RightSubtreeMin(traversal -> right);
+                return value;
+            }
+
+            else
+                return parent_turn_left;
+        }
+    }
+
+    // Assert that x could not be found in the Tree
+    return parent_turn_left;
+}
+
+template <class T>
+T AVLTree<T> :: RightSubtreeMin(AVLNode<T> *node)
+{
+    T value;
+    while (node != nullptr)
+    {
+        if (node -> left != nullptr)
+            node = node -> left;
+
+        else
+            return (node -> item);
+    }
+
+}
+
+/**
+ *
+ * @param x   Node Value that you want to find successor of
+ * @return    Returns pointer to Node that is successor of x
+ *
+ * This function uses Parent Pointers when finding successors.
+ *
+ * 1. Search for the Node Pointer that you want to find successor of
+ * 2. If the node has a RIGHT subtree, simply find the MINIMUM of the RIGHT subtree (DOES NOT suffice to just traverse down one Node!)
+ *
+ * 3. If the node has no RIGHT subtree, we will need to traverse up the Parent Chain.
+ *
+ *    while (traversing up parent chain, till the Root)
+ *    {
+ *       if (the CHILD is no longer RIGHT CHILD of PARENT)
+ *         the PARENT is the Successor
+ *    }
+ *
+ *    else
+ *       no Successor found, x must be the largest value possible in the tree
+ *
+ */
+
 template <class T>
 AVLNode <T>* AVLTree <T> :: successor (T x)
 {
@@ -819,6 +935,76 @@ AVLNode <T>* AVLTree <T> :: successor (T x)
             return ancestor;
     }
 }
+
+template <class T>
+T AVLTree<T> :: PredecessorAlternative(T x)
+{
+    AVLNode<T>* traversal = root;
+    T parent_turn_right = -1;
+
+    while (traversal != nullptr)
+    {
+        // Attempting to search for x
+        if (traversal -> item > x)
+            traversal = traversal -> left;
+
+        else if (traversal -> item < x)
+        {
+            parent_turn_right = traversal -> item;
+            traversal = traversal -> right;
+        }
+
+        else
+        {
+            if (traversal -> left != nullptr)
+            {
+                return (LeftSubtreeMax(traversal -> left));
+            }
+
+            else
+                return parent_turn_right;
+        }
+    }
+
+    return parent_turn_right;
+}
+
+template <class T>
+T AVLTree<T> :: LeftSubtreeMax(AVLNode<T> *node)
+{
+   while (node != nullptr)
+   {
+       // Traverse down Right Subtree if available
+       if (node -> right != nullptr)
+           node = node -> right;
+
+       else
+           return node -> item;
+   }
+}
+
+/**
+ *
+ * @param x   Node Value that you want to find predecessor of
+ * @return    Returns pointer to Node that is predecessor of x
+ *
+ * This function uses Parent Pointers when finding predecessor.
+ *
+ * 1. Search for the Node Pointer that you want to find predecessor of
+ * 2. If the node has a LEFT subtree, simply find the MAXIMUM of the LEFT subtree (DOES NOT suffice to just traverse down one Node!)
+ *
+ * 3. If the node has no LEFT subtree, we will need to traverse up the Parent Chain.
+ *
+ *    while (traversing up parent chain, till the Root)
+ *    {
+ *       if (the CHILD is no longer LEFT CHILD of PARENT)
+ *         the PARENT is the predecessor
+ *    }
+ *
+ *    else
+ *       no predecessor found, x must be the smallest value possible in the tree
+ *
+ */
 
 template <class T>
 AVLNode <T>* AVLTree <T> :: predecessor (T x)
